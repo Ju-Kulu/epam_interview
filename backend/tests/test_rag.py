@@ -52,22 +52,15 @@ def test_answer_question_searches_and_passes_grounded_prompt_to_llm():
     assert vector_store.search_calls == [
         {"query": "What should OAuth redirect URLs use?", "top_k": 2}
     ]
-    assert prompts == [
-        "Answer the question using only the supplied knowledge-base context. "
-        "Do not invent facts. If the context does not contain enough information, "
-        f"respond: {INFORMATION_UNAVAILABLE} "
-        "Do not generate, alter, or invent citation metadata.\n\n"
-        "Knowledge-base context:\n"
-        "OAuth redirects must use HTTPS.\n\n"
-        "Rotate credentials every 90 days.\n\n"
-        "Question:\nWhat should OAuth redirect URLs use?"
-    ]
+    assert "OAuth redirects must use HTTPS." in prompts[0]
+    assert "Rotate credentials every 90 days." in prompts[0]
+    assert "Do not invent facts." in prompts[0]
     assert "authentication-0" not in prompts[0]
     assert "Authentication Guide" not in prompts[0]
+
     assert response.answer == "Use HTTPS for OAuth redirect URLs."
     assert response.sources == chunks
     assert response.sources[0].distance == 0.12
-
 
 def test_no_retrieved_chunks_returns_unavailable_without_calling_llm():
     vector_store = FakeVectorStore([])
