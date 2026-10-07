@@ -14,9 +14,11 @@ class Settings(BaseModel):
     backend_port: int = 8000
     openai_api_key: str | None = Field(default=None, description="API key for the LLM provider.")
     openai_model: str = "gpt-4o-mini"
+    openai_embedding_model: str = "text-embedding-3-small"
     chroma_host: str = "localhost"
     chroma_port: int = 8001
     chroma_collection: str = "knowledge_base"
+    chroma_persist_directory: str = "./chroma_data"
 
 
 @lru_cache
