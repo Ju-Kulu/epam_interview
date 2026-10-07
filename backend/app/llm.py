@@ -1,6 +1,16 @@
-"""LLM integration placeholder.
+"""OpenAI chat-completion abstraction."""
 
-This module will encapsulate the OpenAI API call and prompt construction.
-"""
+from app.config import get_settings
 
-# TODO: implement LLM integration in a later step.
+
+def generate_answer(prompt: str) -> str:
+	"""Send a prompt to the configured chat model and return its answer."""
+	from openai import OpenAI
+
+	settings = get_settings()
+	client = OpenAI(api_key=settings.openai_api_key)
+	response = client.chat.completions.create(
+		model=settings.openai_model,
+		messages=[{"role": "user", "content": prompt}],
+	)
+	return response.choices[0].message.content or ""
