@@ -20,30 +20,30 @@ app = FastAPI(title="Enterprise Knowledge Base RAG Chatbot", lifespan=lifespan)
 
 
 def get_rag_function() -> Callable[[str], RAGResponse]:
-	"""Provide the RAG function as an overrideable endpoint dependency."""
-	return answer_question
+    """Provide the RAG function as an overrideable endpoint dependency."""
+    return answer_question
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-	return {"status": "healthy"}
+    return {"status": "healthy"}
 
 
 @app.post("/chat", response_model=ChatResponse)
 def chat(
-	request: ChatRequest,
-	rag_function: Callable[[str], RAGResponse] = Depends(get_rag_function),
+    request: ChatRequest,
+    rag_function: Callable[[str], RAGResponse] = Depends(get_rag_function),
 ) -> ChatResponse:
-	result = rag_function(request.question)
-	return ChatResponse(
-		answer=result.answer,
-		sources=[
-			SourceReference(
-				chunk_id=source.chunk_id,
-				document=source.document,
-				title=source.title,
-				distance=source.distance,
-			)
-			for source in result.sources
-		],
-	)
+    result = rag_function(request.question)
+    return ChatResponse(
+        answer=result.answer,
+        sources=[
+            SourceReference(
+                chunk_id=source.chunk_id,
+                document=source.document,
+                title=source.title,
+                distance=source.distance,
+            )
+            for source in result.sources
+        ],
+    )
