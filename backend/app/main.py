@@ -1,14 +1,22 @@
 """FastAPI endpoints for the enterprise knowledge-base assistant."""
 
 from collections.abc import Callable
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
 
+from app.indexing import index_knowledge_base
 from app.models import ChatRequest, ChatResponse, SourceReference
 from app.rag import RAGResponse, answer_question
 
 
-app = FastAPI(title="Enterprise Knowledge Base RAG Chatbot")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    index_knowledge_base()
+    yield
+
+
+app = FastAPI(title="Enterprise Knowledge Base RAG Chatbot", lifespan=lifespan)
 
 
 def get_rag_function() -> Callable[[str], RAGResponse]:

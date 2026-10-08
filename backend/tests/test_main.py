@@ -1,17 +1,29 @@
 import pytest
 from fastapi.testclient import TestClient
 
+from app import main
 from app.main import app, get_rag_function
 from app.rag import RAGResponse
 from app.vector_store import RetrievedChunk
 
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    monkeypatch.setattr(main, "index_knowledge_base", lambda: 0)
     app.dependency_overrides.clear()
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+def test_startup_indexes_knowledge_base(monkeypatch):
+    calls = []
+    monkeypatch.setattr(main, "index_knowledge_base", lambda: calls.append("called"))
+
+    with TestClient(app):
+        pass
+
+    assert calls == ["called"]
 
 
 def test_health_returns_healthy_status(client):
