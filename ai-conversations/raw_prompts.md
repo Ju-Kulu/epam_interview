@@ -925,4 +925,111 @@ Correct `ai-conversations/copilot-task-12.md` to match the structure and convent
 - Inspect Task 11 and follow its format rather than inventing a new one.
 Before finishing, show the code diff, the updated Task 12 log, and the actual test results. Do not commit changes.
 
-## Task
+## Task 13 - # Task 13 — Implement Configurable Ollama/OpenAI Providers
+
+## Goal
+
+Implement runtime selection between local Ollama and remote OpenAI using the configuration introduced in Task 12.
+
+The application must use the selected provider for both chat generation and document embeddings. Preserve the existing RAG pipeline, retrieval behavior, citations, API contract, and frontend.
+
+Before making changes, inspect the existing implementation and the Task 11 and Task 12 conversation logs. Follow the existing project architecture and testing conventions. Do not assume the current implementation details without inspecting the files.
+
+## Required changes
+
+### 1. Chat generation
+
+Update the existing LLM integration so that it selects the provider using `settings.ai_provider`.
+
+* When `AI_PROVIDER=ollama`, use the configured `OLLAMA_BASE_URL` and `OLLAMA_CHAT_MODEL`.
+* When `AI_PROVIDER=openai`, preserve the existing OpenAI chat behavior and use `OPENAI_API_KEY` and `OPENAI_MODEL`.
+* Do not require an OpenAI API key when using Ollama.
+* Fail with a clear, actionable error if the selected provider cannot be initialized or used.
+* Reuse existing abstractions and dependencies where practical. Do not introduce a new framework unnecessarily.
+
+### 2. Embeddings
+
+Update the existing embedding integration so that it uses the same selected provider.
+
+* Ollama must use `OLLAMA_BASE_URL` and `OLLAMA_EMBEDDING_MODEL`.
+* OpenAI must continue using `OPENAI_API_KEY` and `OPENAI_EMBEDDING_MODEL`.
+* Use the embedding API supported by the installed Ollama version. Inspect the existing dependencies before deciding whether to use an existing client library or HTTP client.
+* Handle provider errors without silently returning invalid or empty embeddings.
+* Keep the embedding output compatible with the existing ChromaDB indexing and search interfaces.
+
+### 3. ChromaDB collection and embedding compatibility
+
+Different embedding models can produce vectors with different dimensions and incompatible embedding spaces.
+
+* Ensure documents indexed with one embedding configuration are not silently mixed with vectors from another configuration.
+* Inspect the existing ChromaDB collection configuration and persistence behavior before implementing a solution.
+* Prefer the smallest safe change that isolates collections by provider and embedding model, or another equally safe approach consistent with the current design.
+* Preserve existing indexed data where possible. Do not automatically delete collections or erase persisted data.
+* Document any required reindexing when changing embedding models.
+* Keep indexing and retrieval consistent: queries must use the same embedding configuration as the indexed documents.
+
+### 4. Configuration and compatibility
+
+Use the settings added in Task 12. Do not duplicate configuration or hardcode provider selection in application logic.
+
+* Preserve the existing FastAPI endpoints and request/response models.
+* Preserve the `/chat` API contract.
+* Preserve citations and the current retrieval flow.
+* Do not change frontend behavior.
+* Do not add unrelated infrastructure, retries, health checks, or features.
+* Do not require an OpenAI account or API key for local Ollama mode.
+
+### 5. Tests
+
+Add or update focused unit tests for:
+
+* Ollama chat selection and configured model/URL.
+* OpenAI chat selection and preservation of existing behavior.
+* Ollama embedding selection and configured model/URL.
+* OpenAI embedding selection and preservation of existing behavior.
+* Missing or invalid provider configuration where applicable.
+* Provider failures and invalid embedding responses.
+* Consistent embedding configuration between indexing and query retrieval.
+* Isolation of collections or other protection against mixing incompatible embedding models.
+* Existing dependency injection and test compatibility.
+
+Use fake clients or mocked HTTP responses. Unit tests must not require a running Ollama server, network access, or a real OpenAI API key.
+
+Run the configuration tests and the full backend test suite from the `backend/` directory:
+
+`python -m pytest tests/test_config.py -q`
+
+`python -m pytest tests -q`
+
+Report the actual test results. Do not claim that a test passed unless it was executed successfully.
+
+### 6. Conversation log
+
+Create `ai-conversations/copilot-task-13.md`, using the next sequential task number.
+
+Follow the structure and conventions established by `ai-conversations/copilot-task-11.md` and corrected in Task 12.
+
+Include:
+
+* Task name and goal.
+* The complete original prompt given to Copilot, verbatim.
+* Implementation/result.
+* Exact files changed.
+* Actual test commands and results.
+* Important decisions and assumptions.
+* Corrections and limitations, including any required reindexing.
+* Any corrective prompts sent during this task, verbatim, and the corresponding corrections.
+
+Do not overwrite previous task logs. Do not replace the original prompt with a summary. Preserve URLs and code exactly as sent rather than converting them into different Markdown content.
+
+## Constraints
+
+* Do not change the frontend or the `/chat` API contract.
+* Do not rewrite the RAG pipeline or retrieval algorithm.
+* Do not delete existing ChromaDB data.
+* Do not add an OpenAI dependency if the project already has a suitable one.
+* Do not add a new testing framework.
+* Do not commit changes.
+* Do not start another task automatically.
+
+Before finishing, show the code diff, the complete Task 13 conversation log, and the actual test results. If any requirement cannot be safely implemented within this scope, explain the blocker rather than silently omitting it.

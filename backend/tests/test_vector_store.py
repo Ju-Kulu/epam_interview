@@ -1,6 +1,7 @@
 import sys
 from types import SimpleNamespace
 
+import httpx
 import pytest
 
 from app.config import Settings
@@ -62,8 +63,27 @@ class FakeOpenAIClient:
         )
 
 
+class FakeHttpResponse:
+    def __init__(self, payload, status_code=200):
+        self.payload = payload
+        self.status_code = status_code
+
+    def raise_for_status(self):
+        if self.status_code >= 400:
+            request = httpx.Request("POST", "http://ollama-test/api/embed")
+            response = httpx.Response(self.status_code, request=request)
+            raise httpx.HTTPStatusError("Ollama request failed", request=request, response=response)
+
+    def json(self):
+        return self.payload
+
+
 def test_index_chunks_preserves_ids_documents_and_metadata():
-    settings = Settings(chroma_collection="test_knowledge_base")
+    settings = Settings(
+        ai_provider="openai",
+        openai_api_key="test-key",
+        chroma_collection="test_knowledge_base",
+    )
     chroma = FakeChromaClient()
     openai = FakeOpenAIClient()
     store = VectorStore(settings, chroma_client=chroma, openai_client=openai)
@@ -78,7 +98,7 @@ def test_index_chunks_preserves_ids_documents_and_metadata():
 
     store.index_chunks(chunks)
 
-    assert chroma.collection_name == "test_knowledge_base"
+    assert chroma.collection_name.startswith("test_knowledge_base_openai_")
     assert chroma.collection.records == {
         "authentication-0": {
             "embedding": [0.0],
@@ -112,7 +132,11 @@ def test_default_chroma_client_uses_configured_http_host_and_port(monkeypatch):
 
 
 def test_index_chunks_uses_configured_embedding_model_and_chunk_text():
-    settings = Settings(openai_embedding_model="configured-embedding-model")
+    settings = Settings(
+        ai_provider="openai",
+        openai_api_key="test-key",
+        openai_embedding_model="configured-embedding-model",
+    )
     openai = FakeOpenAIClient()
     store = VectorStore(
         settings,
@@ -129,19 +153,20 @@ def test_index_chunks_uses_configured_embedding_model_and_chunk_text():
     ]
 
     store.index_chunks(chunks)
+    store.search("Invoice retry configuration")
 
-    assert openai.calls == [
-        {
-            "model": "configured-embedding-model",
-            "input": ["Invoice retry configuration"],
-        }
+    assert [call["model"] for call in openai.calls] == [
+        "configured-embedding-model",
+        "configured-embedding-model",
     ]
+    assert openai.calls[0]["input"] == ["Invoice retry configuration"]
+    assert openai.calls[1]["input"] == ["Invoice retry configuration"]
 
 
 def test_repeated_indexing_upserts_existing_chunk_ids():
     chroma = FakeChromaClient()
     store = VectorStore(
-        Settings(),
+        Settings(ai_provider="openai", openai_api_key="test-key"),
         chroma_client=chroma,
         openai_client=FakeOpenAIClient(),
     )
@@ -159,7 +184,11 @@ def test_repeated_indexing_upserts_existing_chunk_ids():
 
 
 def test_search_embeds_query_and_returns_typed_results():
-    settings = Settings(openai_embedding_model="configured-embedding-model")
+    settings = Settings(
+        ai_provider="openai",
+        openai_api_key="test-key",
+        openai_embedding_model="configured-embedding-model",
+    )
     chroma = FakeChromaClient()
     openai = FakeOpenAIClient()
     store = VectorStore(settings, chroma_client=chroma, openai_client=openai)
@@ -225,3 +254,148 @@ def test_search_rejects_invalid_top_k(top_k):
 
     with pytest.raises(ValueError, match="top_k must be greater than 0"):
         store.search("valid question", top_k=top_k)
+
+
+def test_ollama_embeddings_use_configured_url_and_model_for_index_and_search(monkeypatch):
+    calls = []
+    chroma = FakeChromaClient()
+    settings = Settings(
+        ai_provider="ollama",
+        ollama_base_url="http://ollama-test:11434/",
+        ollama_embedding_model="embed-test:latest",
+    )
+
+    def fake_post(url, json, timeout):
+        calls.append((url, json))
+        return FakeHttpResponse({"embeddings": [[0.1, 0.2]]})
+
+    monkeypatch.setattr("app.vector_store.httpx.post", fake_post)
+    store = VectorStore(settings, chroma_client=chroma)
+    chunk = DocumentChunk(
+        chunk_id="authentication-0",
+        document="authentication",
+        title="Authentication",
+        text="OAuth setup",
+    )
+
+    store.index_chunks([chunk])
+    store.search("How do I set up OAuth?")
+
+    assert calls == [
+        (
+            "http://ollama-test:11434/api/embed",
+            {"model": "embed-test:latest", "input": ["OAuth setup"]},
+        ),
+        (
+            "http://ollama-test:11434/api/embed",
+            {"model": "embed-test:latest", "input": ["How do I set up OAuth?"]},
+        ),
+    ]
+    assert chroma.collection.records["authentication-0"]["embedding"] == [0.1, 0.2]
+
+
+def test_ollama_embedding_errors_are_actionable(monkeypatch):
+    settings = Settings(ai_provider="ollama")
+    store = VectorStore(settings, chroma_client=FakeChromaClient())
+    monkeypatch.setattr(
+        "app.vector_store.httpx.post",
+        lambda *args, **kwargs: FakeHttpResponse({}, status_code=503),
+    )
+
+    with pytest.raises(RuntimeError, match="Verify Ollama is running"):
+        store.index_chunks(
+            [DocumentChunk("authentication-0", "authentication", None, "OAuth")]
+        )
+
+
+def test_invalid_embedding_response_is_rejected(monkeypatch):
+    store = VectorStore(
+        Settings(ai_provider="ollama"),
+        chroma_client=FakeChromaClient(),
+    )
+    monkeypatch.setattr(
+        "app.vector_store.httpx.post",
+        lambda *args, **kwargs: FakeHttpResponse({"embeddings": [[]]}),
+    )
+
+    with pytest.raises(RuntimeError, match="empty or invalid embedding"):
+        store.index_chunks(
+            [DocumentChunk("authentication-0", "authentication", None, "OAuth")]
+        )
+
+
+def test_openai_embedding_requires_key():
+    with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
+        VectorStore(
+            Settings(ai_provider="openai"),
+            chroma_client=FakeChromaClient(),
+        )
+
+
+def test_openai_embedding_failure_is_actionable(monkeypatch):
+    openai = FakeOpenAIClient()
+
+    def fail_embedding(model, input):
+        raise RuntimeError("provider unavailable")
+
+    monkeypatch.setattr(openai.embeddings, "create", fail_embedding)
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=FakeChromaClient(),
+        openai_client=openai,
+    )
+
+    with pytest.raises(RuntimeError, match="OpenAI embedding request failed"):
+        store.index_chunks(
+            [DocumentChunk("authentication-0", "authentication", None, "OAuth")]
+        )
+
+
+def test_invalid_openai_embedding_response_is_rejected(monkeypatch):
+    openai = FakeOpenAIClient()
+    monkeypatch.setattr(
+        openai,
+        "create",
+        lambda model, input: SimpleNamespace(
+            data=[SimpleNamespace(embedding=[float("nan")])]
+        ),
+    )
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=FakeChromaClient(),
+        openai_client=openai,
+    )
+
+    with pytest.raises(RuntimeError, match="non-numeric embedding values"):
+        store.index_chunks(
+            [DocumentChunk("authentication-0", "authentication", None, "OAuth")]
+        )
+
+
+def test_embedding_collections_are_isolated_by_provider_and_model():
+    settings = [
+        Settings(
+            ai_provider="openai",
+            openai_api_key="test-key",
+            openai_embedding_model="embedding-a",
+        ),
+        Settings(
+            ai_provider="openai",
+            openai_api_key="test-key",
+            openai_embedding_model="embedding-b",
+        ),
+        Settings(ai_provider="ollama", ollama_embedding_model="embedding-a"),
+    ]
+    collection_names = []
+
+    for setting in settings:
+        chroma = FakeChromaClient()
+        VectorStore(
+            setting,
+            chroma_client=chroma,
+            openai_client=FakeOpenAIClient() if setting.ai_provider == "openai" else None,
+        )
+        collection_names.append(chroma.collection_name)
+
+    assert len(set(collection_names)) == 3
+    assert all(name.startswith("knowledge_base_") for name in collection_names)
