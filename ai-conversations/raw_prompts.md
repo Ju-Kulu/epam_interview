@@ -1033,3 +1033,62 @@ Do not overwrite previous task logs. Do not replace the original prompt with a s
 * Do not start another task automatically.
 
 Before finishing, show the code diff, the complete Task 13 conversation log, and the actual test results. If any requirement cannot be safely implemented within this scope, explain the blocker rather than silently omitting it.
+
+## Task 14 — Improve Markdown-aware document chunking
+
+### Goal
+
+Improve the deterministic character-based chunking in `backend/app/ingestion.py` so chunks preserve meaningful Markdown content and avoid splitting paragraphs or sentences unnecessarily.
+
+### Current problem
+
+`chunk_documents()` currently splits text at fixed character offsets. This can split words, sentences, Markdown sections, and list items in the middle. For example, a chunk may end with `Log each sync event for aud` and the next chunk may start with the remainder.
+
+### Requirements
+
+1. Keep the public `chunk_documents(documents, chunk_size=500, overlap=50)` function signature unchanged.
+2. Keep `LoadedDocument` and `DocumentChunk` unchanged.
+3. Preserve deterministic chunk ordering, metadata, and IDs in the format `<document-name>-<zero-based-index>`.
+4. Keep current parameter validation:
+
+   * `chunk_size` must be greater than zero.
+   * `overlap` must be non-negative and smaller than `chunk_size`.
+5. Prefer splitting at meaningful boundaries, in this order:
+
+   * Markdown block / paragraph boundaries.
+   * Sentence boundaries when a block exceeds the chunk limit.
+   * Character boundaries only when a single sentence or indivisible block is too long.
+6. Never exceed `chunk_size` characters per chunk.
+7. Preserve all non-whitespace document content. Do not silently drop text.
+8. Keep overlap deterministic and avoid producing chunks that contain only overlap or whitespace.
+9. Preserve short documents as a single chunk.
+10. Empty or whitespace-only documents must still produce no chunks.
+11. Do not modify `vector_store.py`, `indexing.py`, RAG logic, API behavior, configuration, Docker files, or dependencies.
+12. Do not introduce third-party libraries.
+
+### Tests
+
+Update `backend/tests/test_ingestion.py` to cover:
+
+* Existing loading and validation behavior.
+* Existing short-document behavior.
+* Deterministic chunk IDs and ordering.
+* Chunks staying within `chunk_size`.
+* Preference for paragraph boundaries.
+* Preference for sentence boundaries when a paragraph is too long.
+* Character-level fallback for a long sentence or token.
+* Correct overlap behavior.
+* Preservation of the original non-whitespace content without accidental omissions.
+* Empty and whitespace-only documents.
+
+Do not keep tests that require arbitrary fixed character slices when the new algorithm is expected to prefer semantic boundaries. Replace those assertions with behavior-based expectations.
+
+### Acceptance criteria
+
+* Run `pytest backend/tests/test_ingestion.py -q` from the repository root, or run `pytest tests/test_ingestion.py -q` from `backend`.
+* Run the full backend test suite afterward.
+* Report the exact test commands and actual results.
+* Review the final diff and ensure only `backend/app/ingestion.py` and `backend/tests/test_ingestion.py` changed.
+
+Implement the smallest clear solution. Do not make unrelated refactors.
+

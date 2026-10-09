@@ -43,3 +43,29 @@ This branch contains the project structure and configuration only. The applicati
 ## AI Assistant Usage Logs
 
 `ai-conversations/` contains concise per-task AI assistant usage logs for Tasks 1–4, including prompt summaries where exact historical text is unavailable, implementation results, changed files, test outcomes, and key decisions. This directory fulfills the assignment's AI assistant log requirement.
+
+## Local Ollama Setup
+
+The default AI provider is Ollama. Before running the application locally, make sure Ollama is installed and running.
+
+Download the chat and embedding models:
+
+```powershell
+ollama pull llama3.2
+ollama pull nomic-embed-text
+```
+
+Verify that both models are available:
+
+```powershell
+ollama list
+```
+
+The application uses:
+
+* `llama3.2` for chat responses.
+* `nomic-embed-text` for document embeddings and query embeddings.
+
+The default Ollama URL is `http://host.docker.internal:11434` when the backend runs in Docker Compose. If running the backend directly on Windows, configure `OLLAMA_BASE_URL` to `http://localhost:11434`.
+
+If you change the embedding provider or model, the documents must be re-indexed into the corresponding ChromaDB collection. Existing collections are not automatically deleted.
