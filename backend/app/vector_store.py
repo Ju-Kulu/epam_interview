@@ -1,4 +1,4 @@
-"""Persistent ChromaDB storage for embedded document chunks."""
+"""ChromaDB HTTP storage for embedded document chunks."""
 
 from dataclasses import dataclass
 from typing import Any
@@ -29,8 +29,9 @@ class VectorStore:
         if chroma_client is None:
             import chromadb
 
-            chroma_client = chromadb.PersistentClient(
-                path=self.settings.chroma_persist_directory
+            chroma_client = chromadb.HttpClient(
+                host=self.settings.chroma_host,
+                port=self.settings.chroma_port,
             )
 
         if openai_client is None:

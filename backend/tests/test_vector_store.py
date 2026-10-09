@@ -1,3 +1,4 @@
+import sys
 from types import SimpleNamespace
 
 import pytest
@@ -89,6 +90,25 @@ def test_index_chunks_preserves_ids_documents_and_metadata():
             },
         }
     }
+
+
+def test_default_chroma_client_uses_configured_http_host_and_port(monkeypatch):
+    calls = []
+
+    def fake_http_client(host, port):
+        calls.append((host, port))
+        return FakeChromaClient()
+
+    monkeypatch.setitem(
+        sys.modules,
+        "chromadb",
+        SimpleNamespace(HttpClient=fake_http_client),
+    )
+    settings = Settings(chroma_host="chroma-service", chroma_port=8123)
+
+    VectorStore(settings, openai_client=FakeOpenAIClient())
+
+    assert calls == [("chroma-service", 8123)]
 
 
 def test_index_chunks_uses_configured_embedding_model_and_chunk_text():

@@ -1,15 +1,13 @@
 from functools import lru_cache
-from pydantic import BaseModel, Field
+from pydantic import Field
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
-class Settings(BaseModel):
-    """Application settings placeholder.
-
-    Real configuration values will be wired in once the backend implementation starts.
-    """
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(populate_by_name=True)
 
     app_name: str = "enterprise-kb-rag-chatbot"
-    env: str = "development"
+    env: str = Field(default="development", validation_alias="APP_ENV")
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     openai_api_key: str | None = Field(default=None, description="API key for the LLM provider.")
@@ -18,7 +16,6 @@ class Settings(BaseModel):
     chroma_host: str = "localhost"
     chroma_port: int = 8001
     chroma_collection: str = "knowledge_base"
-    chroma_persist_directory: str = "./chroma_data"
 
 
 @lru_cache
