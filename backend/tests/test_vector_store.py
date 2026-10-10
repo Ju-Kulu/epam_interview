@@ -13,8 +13,13 @@ class FakeCollection:
     def __init__(self):
         self.records = {}
         self.query_calls = []
+        self.get_calls = []
+        self.delete_calls = []
+        self.fail_upsert = False
 
     def upsert(self, ids, embeddings, documents, metadatas):
+        if self.fail_upsert:
+            raise RuntimeError("upsert failed")
         for record_id, embedding, document, metadata in zip(
             ids, embeddings, documents, metadatas
         ):
@@ -23,6 +28,23 @@ class FakeCollection:
                 "document": document,
                 "metadata": metadata,
             }
+
+    def get(self, where, include):
+        self.get_calls.append({"where": where, "include": include})
+        matching = [
+            (record_id, record)
+            for record_id, record in self.records.items()
+            if record["metadata"].get("document") == where["document"]
+        ]
+        return {
+            "ids": [record_id for record_id, _ in matching],
+            "metadatas": [record["metadata"] for _, record in matching],
+        }
+
+    def delete(self, ids):
+        self.delete_calls.append(list(ids))
+        for record_id in ids:
+            self.records.pop(record_id, None)
 
     def query(self, query_embeddings, n_results, include):
         self.query_calls.append(
@@ -181,6 +203,125 @@ def test_repeated_indexing_upserts_existing_chunk_ids():
     store.index_chunks([chunk])
 
     assert list(chroma.collection.records) == ["integrations-0"]
+
+
+def test_reindexing_removes_stale_chunks_and_preserves_unrelated_documents():
+    chroma = FakeChromaClient()
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=chroma,
+        openai_client=FakeOpenAIClient(),
+    )
+    store.index_chunks(
+        [
+            DocumentChunk("auth-0", "authentication", "Authentication", "old first"),
+            DocumentChunk("auth-1", "authentication", "Authentication", "old second"),
+            DocumentChunk("payments-0", "payments", "Payments", "payment info"),
+        ]
+    )
+
+    store.index_chunks(
+        [
+            DocumentChunk("auth-0", "authentication", "Authentication", "updated first"),
+            DocumentChunk("auth-2", "authentication", "Authentication", "new second"),
+        ]
+    )
+
+    records = chroma.collection.records
+    assert set(records) == {"auth-0", "auth-2", "payments-0"}
+    assert records["auth-0"]["document"] == "updated first"
+    assert records["auth-2"]["metadata"] == {
+        "document": "authentication",
+        "title": "Authentication",
+        "chunk_id": "auth-2",
+    }
+    assert chroma.collection.delete_calls == [["auth-1"]]
+
+
+def test_embedding_failure_does_not_modify_existing_records(monkeypatch):
+    chroma = FakeChromaClient()
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=chroma,
+        openai_client=FakeOpenAIClient(),
+    )
+    existing_chunk = DocumentChunk("auth-0", "authentication", None, "existing")
+    store.index_chunks([existing_chunk])
+    existing_records = dict(chroma.collection.records)
+    monkeypatch.setattr(
+        store,
+        "_embed_texts",
+        lambda texts: (_ for _ in ()).throw(RuntimeError("embedding failed")),
+    )
+
+    with pytest.raises(RuntimeError, match="embedding failed"):
+        store.index_chunks(
+            [DocumentChunk("auth-1", "authentication", None, "replacement")]
+        )
+
+    assert chroma.collection.records == existing_records
+    assert chroma.collection.delete_calls == []
+
+
+def test_upsert_failure_does_not_attempt_stale_deletion():
+    chroma = FakeChromaClient()
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=chroma,
+        openai_client=FakeOpenAIClient(),
+    )
+    existing_chunk = DocumentChunk("auth-0", "authentication", None, "existing")
+    store.index_chunks([existing_chunk])
+    existing_records = dict(chroma.collection.records)
+    chroma.collection.fail_upsert = True
+
+    with pytest.raises(RuntimeError, match="upsert failed"):
+        store.index_chunks(
+            [DocumentChunk("auth-1", "authentication", None, "replacement")]
+        )
+
+    assert chroma.collection.records == existing_records
+    assert chroma.collection.delete_calls == []
+
+
+def test_empty_indexing_does_not_read_or_modify_collection():
+    chroma = FakeChromaClient()
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=chroma,
+        openai_client=FakeOpenAIClient(),
+    )
+    store.index_chunks(
+        [DocumentChunk("auth-0", "authentication", None, "existing")]
+    )
+    existing_records = dict(chroma.collection.records)
+    gets_before = len(chroma.collection.get_calls)
+
+    store.index_chunks([])
+
+    assert chroma.collection.records == existing_records
+    assert chroma.collection.delete_calls == []
+    assert len(chroma.collection.get_calls) == gets_before
+
+
+def test_repeated_indexing_is_idempotent_and_preserves_current_records():
+    chroma = FakeChromaClient()
+    store = VectorStore(
+        Settings(ai_provider="openai", openai_api_key="test-key"),
+        chroma_client=chroma,
+        openai_client=FakeOpenAIClient(),
+    )
+    chunks = [
+        DocumentChunk("auth-0", "authentication", "Authentication", "first"),
+        DocumentChunk("auth-1", "authentication", "Authentication", "second"),
+    ]
+
+    store.index_chunks(chunks)
+    records_after_first_index = dict(chroma.collection.records)
+    store.index_chunks(chunks)
+
+    assert chroma.collection.records == records_after_first_index
+    assert set(chroma.collection.records) == {"auth-0", "auth-1"}
 
 
 def test_search_embeds_query_and_returns_typed_results():

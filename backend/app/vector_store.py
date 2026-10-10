@@ -129,12 +129,16 @@ class VectorStore:
         return validated
 
     def index_chunks(self, chunks: list[DocumentChunk]) -> None:
-        """Embed and upsert chunks, using their deterministic IDs as record IDs."""
+        """Upsert chunks and remove obsolete chunks for represented documents."""
         if not chunks:
             return
 
         texts = [chunk.text for chunk in chunks]
         embeddings = self._embed_texts(texts)
+        incoming_ids_by_document: dict[str, set[str]] = {}
+        for chunk in chunks:
+            incoming_ids_by_document.setdefault(chunk.document, set()).add(chunk.chunk_id)
+
         self._collection.upsert(
             ids=[chunk.chunk_id for chunk in chunks],
             embeddings=embeddings,
@@ -148,6 +152,21 @@ class VectorStore:
                 for chunk in chunks
             ],
         )
+
+        for document, incoming_ids in incoming_ids_by_document.items():
+            existing = self._collection.get(
+                where={"document": document},
+                include=["metadatas"],
+            )
+            stale_ids = [
+                chunk_id
+                for chunk_id, metadata in zip(existing["ids"], existing["metadatas"])
+                if chunk_id not in incoming_ids
+                and metadata
+                and metadata.get("document") == document
+            ]
+            if stale_ids:
+                self._collection.delete(ids=stale_ids)
 
     def search(self, query: str, top_k: int = 3) -> list[RetrievedChunk]:
         """Return the nearest stored chunks for a query."""

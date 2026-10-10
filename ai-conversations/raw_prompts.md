@@ -1091,10 +1091,7 @@ Do not keep tests that require arbitrary fixed character slices when the new alg
 
 Implement the smallest clear solution. Do not make unrelated refactors.
 
-## Task 15 prompt (verbatim)
-
-````text
-# Task 15 - Keep Markdown Section Headings with Their Content
+## Task 15 - Keep Markdown Section Headings with Their Content
 
 ### Goal
 
@@ -1150,4 +1147,89 @@ Do not claim test results that have not been observed. If tests cannot be run, r
 ### Completion response
 
 Summarize the implementation, explain the heading-grouping behavior, list files changed, and provide actual test results. Flag any unrelated changes already present in the working tree instead of silently reverting them.
-````
+
+## Task 16 - Safely remove stale chunks during reindexing
+
+### Goal
+
+Update the ChromaDB indexing logic to remove obsolete chunks when a document produces fewer chunks after reindexing, while preserving unrelated documents and avoiding premature deletion of existing records.
+
+### Context
+
+* `backend/app/indexing.py` loads Markdown documents, chunks them, and calls `VectorStore.index_chunks(chunks)`.
+* `backend/app/vector_store.py` generates embeddings and uses ChromaDB `upsert` with deterministic chunk IDs.
+* Upsert inserts or updates matching IDs but does not remove obsolete IDs from previous indexing runs.
+* ChromaDB collections are separated by embedding provider and embedding model.
+* Task 15 improved Markdown heading and content grouping. Reindexing must not leave obsolete chunks from earlier indexing runs.
+
+### Requirements
+
+1. Keep existing public interfaces unchanged unless a change is strictly necessary.
+2. Preserve embedding-provider behavior, collection naming, metadata, deterministic IDs, and the search API.
+3. Generate and validate all embeddings before modifying the collection.
+4. Successfully upsert the incoming chunks before attempting to delete obsolete records.
+5. After a successful upsert, remove stale records belonging to documents represented in the incoming chunks. Preserve records belonging to all other documents.
+6. If embedding generation fails, do not modify existing collection records.
+7. If upsert fails, do not attempt stale-record deletion.
+8. An empty chunk list must not delete existing records.
+9. Repeated indexing of the same chunks must be idempotent.
+10. Use APIs compatible with the project's installed ChromaDB version.
+11. Keep the implementation simple and avoid unrelated refactoring.
+12. Do not claim transactional guarantees that ChromaDB does not provide.
+
+### Tests
+
+Add focused unit tests using fake clients or collections as appropriate. Verify actual stored IDs and metadata where possible.
+
+Cover:
+
+* Reindexing a document with fewer chunks removes obsolete IDs.
+* Existing IDs are updated and new chunks are stored.
+* Chunks belonging to unrelated documents are preserved.
+* Embedding-generation failure leaves existing records unchanged.
+* Upsert failure does not trigger stale-record deletion.
+* Empty input leaves the collection unchanged.
+* Repeated indexing creates no duplicates and preserves valid records.
+* Existing provider-specific behavior and tests continue to pass.
+
+### Scope restrictions
+
+* Do not change ingestion or chunking behavior.
+* Do not change RAG prompts, retrieval ranking, API contracts, frontend, or Docker configuration.
+* Do not clear or recreate the entire collection.
+* Do not revert unrelated user changes.
+
+### AI usage logging requirements
+
+Create `ai-conversations/copilot-task-16.md` using **exactly these seven sections, in this order**, with the same headings and no additional sections:
+
+1. `## Task name and goal`
+2. `## Prompt summary`
+3. `## Implementation / result`
+4. `## Files changed`
+5. `## Tests and result`
+6. `## Important decisions / assumptions`
+7. `## Corrections / limitations`
+
+Fill them as follows:
+
+* **Task name and goal:** Give the task name and concise goal.
+* **Prompt summary:** Summarize the task in your own words. Do not paste the complete prompt here and do not use a heading or field named `Exact Prompt`.
+* **Implementation / result:** Describe what was actually implemented and the result. Do not invent completed work.
+* **Files changed:** List only files actually changed and briefly describe each change.
+* **Tests and result:** Record actual test commands and results, distinguishing passed, failed, and not-run tests.
+* **Important decisions / assumptions:** Record relevant implementation choices and assumptions, including the stale-record deletion strategy.
+* **Corrections / limitations:** Record relevant warnings, unresolved issues, limitations, or corrections. If none were found, say so only after checking.
+
+Append the **complete Task 16 prompt verbatim** to `ai-conversations/raw_prompts.md` under the Task 16 heading. Do not put the full prompt in `copilot-task-16.md`.
+
+Preserve existing logs and unrelated user changes. Do not reformat or rewrite earlier task entries.
+
+### Validation
+
+1. Run the focused vector-store tests first.
+2. Run the full backend test suite.
+3. Review the final diff and `git status --short`.
+4. Record actual commands and outputs in the task log and final summary.
+5. Investigate failures and report them honestly. Do not weaken tests merely to obtain a passing result.
+6. If the implementation or validation is incomplete, explicitly document that in the task log.
