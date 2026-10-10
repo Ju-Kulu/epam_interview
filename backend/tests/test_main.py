@@ -86,3 +86,37 @@ def test_chat_rejects_invalid_request_body(client, body):
     response = client.post("/chat", json=body)
 
     assert response.status_code == 422
+
+
+def test_get_document_returns_markdown_content(client, monkeypatch):
+    from app.ingestion import LoadedDocument
+
+    monkeypatch.setattr(
+        main,
+        "load_documents",
+        lambda: [
+            LoadedDocument(
+                name="integrations",
+                title="Third-Party Integrations",
+                text="# Third-Party Integrations\n\nConfigure webhooks.",
+            )
+        ],
+    )
+
+    response = client.get("/documents/integrations")
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "document": "integrations",
+        "title": "Third-Party Integrations",
+        "content": "# Third-Party Integrations\n\nConfigure webhooks.",
+    }
+
+
+def test_get_document_returns_404_when_not_found(client, monkeypatch):
+    monkeypatch.setattr(main, "load_documents", lambda: [])
+
+    response = client.get("/documents/unknown")
+
+    assert response.status_code == 404
+    assert response.json() == {"detail": "Document not found."}

@@ -1233,3 +1233,9 @@ Preserve existing logs and unrelated user changes. Do not reformat or rewrite ea
 4. Record actual commands and outputs in the task log and final summary.
 5. Investigate failures and report them honestly. Do not weaken tests merely to obtain a passing result.
 6. If the implementation or validation is incomplete, explicitly document that in the task log.
+
+## Task: Clickable source documents
+
+Implemented an endpoint to retrieve the full original Markdown document by document ID. Updated the frontend source references to open the selected document in an inline panel, with loading and error states. Added a Vite proxy rule for `/documents` to route requests to the backend.
+
+Verified document retrieval through the frontend proxy and tested opening multiple source documents in the UI. Existing RAG retrieval and answer generation logic remains unchanged.

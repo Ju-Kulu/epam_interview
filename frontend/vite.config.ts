@@ -15,6 +15,10 @@ export default defineConfig(({ mode }) => {
                     target,
                     changeOrigin: true,
                 },
+                '/documents': {
+                    target,
+                    changeOrigin: true,
+                },
             },
         },
     };

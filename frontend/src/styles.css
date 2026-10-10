@@ -246,15 +246,115 @@ body {
 }
 
 .source-document {
+    width: fit-content;
+    max-width: 100%;
+    padding: 0;
+    border: 0;
+    background: transparent;
     color: #285e54;
+    font: inherit;
     font-size: 12px;
     font-weight: 650;
+    text-align: left;
+    overflow-wrap: anywhere;
+    cursor: pointer;
+}
+
+.source-document:hover {
+    color: #164f49;
+    text-decoration: underline;
+}
+
+.source-document:focus-visible {
+    outline: 2px solid #35776a;
+    outline-offset: 3px;
+    border-radius: 2px;
 }
 
 .source-detail {
     color: #8a9690;
     font-size: 10px;
     overflow-wrap: anywhere;
+}
+
+.document-panel {
+    margin: 0 22px 20px;
+    padding: 18px;
+    border: 1px solid #d7e0dc;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+.document-panel-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid #e6ebe7;
+}
+
+.document-eyebrow {
+    margin: 0 0 5px;
+    color: #a64f34;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+}
+
+.document-panel-header h2 {
+    margin: 0;
+    color: #183c38;
+    font-family: Georgia, 'Times New Roman', serif;
+    font-size: 19px;
+    font-weight: 500;
+}
+
+.document-close {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border: 1px solid #d7e0dc;
+    border-radius: 6px;
+    background: #f5f8f5;
+    color: #285e54;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.document-close:hover {
+    background: #e9efeb;
+}
+
+.document-content {
+    max-height: 320px;
+    margin: 14px 0 0;
+    overflow: auto;
+    color: #35443e;
+    font-family: 'Segoe UI', sans-serif;
+    font-size: 12px;
+    line-height: 1.75;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.document-error {
+    color: #8e3429;
+    font-size: 12px;
+}
+
+.document-error p {
+    margin: 0 0 10px;
+}
+
+.document-error button {
+    padding: 6px 10px;
+    border: 1px solid #d7e0dc;
+    border-radius: 5px;
+    background: #fff;
+    color: #285e54;
+    cursor: pointer;
 }
 
 .no-sources {

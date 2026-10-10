@@ -3,7 +3,8 @@
 from collections.abc import Callable
 from contextlib import asynccontextmanager
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
+from app.ingestion import load_documents
 
 from app.indexing import index_knowledge_base
 from app.models import ChatRequest, ChatResponse, SourceReference
@@ -27,6 +28,22 @@ def get_rag_function() -> Callable[[str], RAGResponse]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "healthy"}
+
+
+@app.get("/documents/{document_id}")
+def get_document(document_id: str) -> dict[str, str | None]:
+    """Return a knowledge-base document by its identifier."""
+    documents = load_documents()
+
+    for document in documents:
+        if document.name == document_id:
+            return {
+                "document": document.name,
+                "title": document.title,
+                "content": document.text,
+            }
+
+    raise HTTPException(status_code=404, detail="Document not found.")
 
 
 @app.post("/chat", response_model=ChatResponse)

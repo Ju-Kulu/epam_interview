@@ -16,6 +16,12 @@ type ChatResponse = {
     sources: SourceReference[];
 };
 
+type KnowledgeDocument = {
+    document: string;
+    title: string | null;
+    content: string;
+};
+
 type ChatTurn = {
     id: number;
     question: string;
@@ -56,7 +62,56 @@ export default function App() {
     const [turns, setTurns] = useState<ChatTurn[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [selectedDocument, setSelectedDocument] = useState<KnowledgeDocument | null>(null);
+    const [documentLoading, setDocumentLoading] = useState(false);
+    const [documentError, setDocumentError] = useState<string | null>(null);
     const nextTurnId = useRef(0);
+
+    async function handleOpenDocument(documentId: string) {
+        setSelectedDocument(null);
+        setDocumentError(null);
+        setDocumentLoading(true);
+
+        try {
+            const response = await fetch(
+                `/documents/${encodeURIComponent(documentId)}`,
+            );
+            const payload: unknown = await response.json().catch(() => null);
+
+            if (!response.ok) {
+                const message =
+                    typeof payload === 'object' &&
+                        payload !== null &&
+                        typeof (payload as Record<string, unknown>).detail === 'string'
+                        ? (payload as Record<string, string>).detail
+                        : `Unable to load document (HTTP ${response.status}).`;
+
+                throw new Error(message);
+            }
+
+            if (
+                typeof payload !== 'object' ||
+                payload === null ||
+                typeof (payload as Record<string, unknown>).document !== 'string' ||
+                !(
+                    typeof (payload as Record<string, unknown>).title === 'string' ||
+                    (payload as Record<string, unknown>).title === null
+                ) ||
+                typeof (payload as Record<string, unknown>).content !== 'string'
+            ) {
+                throw new Error('The service returned an invalid document.');
+            }
+            setSelectedDocument(payload as KnowledgeDocument);
+        } catch (error) {
+            setDocumentError(
+                error instanceof Error
+                    ? error.message
+                    : 'Unable to load the source document.',
+            );
+        } finally {
+            setDocumentLoading(false);
+        }
+    }
 
     async function handleSubmit(event: FormEvent<HTMLFormElement>) {
         event.preventDefault();
@@ -145,7 +200,13 @@ export default function App() {
                                                     <h2>Sources</h2>
                                                     {turn.response.sources.map((source) => (
                                                         <div className="source-row" key={source.chunk_id}>
-                                                            <span className="source-document">{source.title ?? source.document}</span>
+                                                            <button
+                                                                type="button"
+                                                                className="source-document"
+                                                                onClick={() => handleOpenDocument(source.document)}
+                                                            >
+                                                                {source.title ?? source.document}
+                                                            </button>
                                                             <span className="source-detail">
                                                                 {source.document} · {source.chunk_id} · distance {source.distance.toFixed(2)}
                                                             </span>
@@ -165,6 +226,51 @@ export default function App() {
                                     ) : null}
                                 </div>
                             ))
+                        )}
+                        {documentLoading && (
+                            <section className="document-panel" role="status">
+                                Loading source document...
+                            </section>
+                        )}
+
+                        {documentError && (
+                            <section className="document-panel document-error" role="alert">
+                                <p>{documentError}</p>
+                                <button
+                                    type="button"
+                                    onClick={() => setDocumentError(null)}
+                                >
+                                    Dismiss
+                                </button>
+                            </section>
+                        )}
+
+                        {selectedDocument && (
+                            <section
+                                className="document-panel"
+                                aria-label="Source document"
+                            >
+                                <div className="document-panel-header">
+                                    <div>
+                                        <p className="document-eyebrow">SOURCE DOCUMENT</p>
+                                        <h2>
+                                            {selectedDocument.title ?? selectedDocument.document}
+                                        </h2>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        className="document-close"
+                                        onClick={() => setSelectedDocument(null)}
+                                        aria-label="Close source document"
+                                    >
+                                        ×
+                                    </button>
+                                </div>
+
+                                <pre className="document-content">
+                                    {selectedDocument.content}
+                                </pre>
+                            </section>
                         )}
                     </div>
 
