@@ -4,11 +4,14 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(populate_by_name=True)
+    model_config = SettingsConfigDict(
+        populate_by_name=True,
+        extra="ignore",
+    )
 
     app_name: str = "enterprise-kb-rag-chatbot"
     env: str = Field(default="development", validation_alias="APP_ENV")
-    ai_provider: str = Field(default="ollama", validation_alias="AI_PROVIDER")
+    ai_provider: str = Field(default="ollama")
     backend_host: str = "0.0.0.0"
     backend_port: int = 8000
     openai_api_key: str | None = Field(default=None, description="API key for the LLM provider.")

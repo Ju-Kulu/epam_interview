@@ -97,8 +97,11 @@ def test_openai_chat_uses_existing_model_and_api_key(monkeypatch):
 
 
 def test_openai_chat_requires_api_key(monkeypatch):
-    monkeypatch.setattr(llm, "get_settings", lambda: Settings(ai_provider="openai"))
-
+    monkeypatch.setattr(
+        llm,
+        "get_settings",
+        lambda: Settings(ai_provider="openai", openai_api_key=""),
+    )
     with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
         llm.generate_answer("Question")
 

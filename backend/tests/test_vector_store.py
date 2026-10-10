@@ -468,7 +468,7 @@ def test_invalid_embedding_response_is_rejected(monkeypatch):
 def test_openai_embedding_requires_key():
     with pytest.raises(ValueError, match="OPENAI_API_KEY is required"):
         VectorStore(
-            Settings(ai_provider="openai"),
+            Settings(ai_provider="openai", openai_api_key=""),
             chroma_client=FakeChromaClient(),
         )
 

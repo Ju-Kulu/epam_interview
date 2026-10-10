@@ -5,8 +5,7 @@ from pathlib import Path
 import re
 
 
-DEFAULT_DATA_DIR = Path(__file__).resolve().parents[2] / "data"
-
+DEFAULT_DATA_DIR = Path("/data")
 
 @dataclass(frozen=True)
 class LoadedDocument:
