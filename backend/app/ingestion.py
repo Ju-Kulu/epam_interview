@@ -67,6 +67,8 @@ def _validate_chunk_parameters(chunk_size: int, overlap: int) -> None:
 _MARKDOWN_BLOCK_START = re.compile(
     r"(?m)^[ \t]{0,3}(?:#{1,6}[ \t]+|[-*+][ \t]+|\d+[.)][ \t]+|>[ \t]?)"
 )
+_MARKDOWN_HEADING = re.compile(r"^[ \t]{0,3}#{1,6}[ \t]+")
+_MARKDOWN_LIST_ITEM = re.compile(r"^[ \t]{0,3}(?:[-*+]|\d+[.)])[ \t]+")
 _PARAGRAPH_BREAK = re.compile(r"\n[ \t]*\n+")
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])(?=\s+)")
 
@@ -88,6 +90,42 @@ def _markdown_block_spans(text: str) -> list[tuple[int, int]]:
     ]
 
 
+def _is_markdown_list_item(text: str, span: tuple[int, int]) -> bool:
+    return bool(_MARKDOWN_LIST_ITEM.match(text[span[0] : span[1]].lstrip()))
+
+
+def _group_headings_with_content(
+    text: str, spans: list[tuple[int, int]], chunk_size: int
+) -> list[tuple[int, int]]:
+    grouped = []
+    index = 0
+
+    while index < len(spans):
+        start, end = spans[index]
+        heading = text[start:end].strip().splitlines()
+        if heading and _MARKDOWN_HEADING.match(heading[0]) and index + 1 < len(spans):
+            content_index = index + 1
+            group_end = spans[content_index][1]
+
+            if _is_markdown_list_item(text, spans[content_index]):
+                while (
+                    content_index + 1 < len(spans)
+                    and _is_markdown_list_item(text, spans[content_index + 1])
+                ):
+                    content_index += 1
+                    group_end = spans[content_index][1]
+
+            if group_end - start <= chunk_size:
+                grouped.append((start, group_end))
+                index = content_index + 1
+                continue
+
+        grouped.append((start, end))
+        index += 1
+
+    return grouped
+
+
 def _split_long_span(
     text: str, start: int, end: int, chunk_size: int
 ) -> list[tuple[int, int]]:
@@ -107,7 +145,10 @@ def _split_long_span(
 
 def _document_chunk_spans(text: str, chunk_size: int) -> list[tuple[int, int]]:
     spans = []
-    for block_start, block_end in _markdown_block_spans(text):
+    blocks = _group_headings_with_content(
+        text, _markdown_block_spans(text), chunk_size
+    )
+    for block_start, block_end in blocks:
         if block_end - block_start <= chunk_size:
             spans.append((block_start, block_end))
             continue

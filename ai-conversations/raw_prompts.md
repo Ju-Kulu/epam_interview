@@ -2,7 +2,7 @@
 ## Task 1 - Initial project
 Create the initial project structure and configuration only. Do not implement RAG, frontend functionality, or API endpoints yet. Context "Enterprise Knowledge Base RAG Chatbot.md"
 
-## Task 2 — Knowledge Base documents and document loader
+## Task 2 - Knowledge Base documents and document loader
 Continue from the existing project structure.
 
 For this task, implement ONLY the knowledge-base document loading functionality.
@@ -526,7 +526,7 @@ After implementation:
 Do not make unrelated changes.
 
 
-## Task 8 — Knowledge Base Indexing
+## Task 8 - Knowledge Base Indexing
 
 ### Goal
 Implement the knowledge-base indexing orchestration layer.
@@ -622,7 +622,7 @@ Stop after completing this task and report:
 - any warnings/errors
 - brief explanation of the implementation
 
-## Task 9 — Application startup indexing
+## Task 9 - Application startup indexing
 
 ### Goal
 Integrate the existing knowledge-base indexing flow with FastAPI application startup.
@@ -667,7 +667,7 @@ Do not duplicate document loading, chunking, embedding, or indexing logic.
 ### Important
 Stop after completing this task. Do not proceed to frontend, Docker, or other tasks.
 
-## Task 10 — Frontend Chat UI
+## Task 10 - Frontend Chat UI
 
 ### Goal
 Implement the frontend chat interface for the existing Enterprise Knowledge Base RAG Chatbot.
@@ -862,7 +862,7 @@ Do not copy large amounts of source code into the log.
 - Keep the existing dependency injection used by the unit tests.
 - Stop after this task; do not start the next task automatically.
 
-## Task 1 — Add configurable AI provider settings
+## Task 1 - Add configurable AI provider settings
 
 Update only `backend/app/config.py` and the relevant configuration tests.
 
@@ -891,7 +891,7 @@ Requirements:
 Before finishing, summarize the changed files and show the test results. Do not commit changes.
 9. Create a conversation log at `ai-conversations/copilot-task-N.md`, using the next available sequential task number. Follow the format of existing task logs. Include the task name, the full prompt given to Copilot, a summary of the implementation, the files changed, the tests executed and their results. Do not overwrite existing logs. If the directory or previous logs do not exist, inspect the repository and handle this safely.
 
-## Task 12 — Correct Configuration and Conversation Log
+## Task 12 - Correct Configuration and Conversation Log
 
 The current Task 12 is not complete. Fix the existing task; do not start a new task.
 
@@ -925,9 +925,9 @@ Correct `ai-conversations/copilot-task-12.md` to match the structure and convent
 - Inspect Task 11 and follow its format rather than inventing a new one.
 Before finishing, show the code diff, the updated Task 12 log, and the actual test results. Do not commit changes.
 
-## Task 13 - # Task 13 — Implement Configurable Ollama/OpenAI Providers
+## Task 13 - Implement Configurable Ollama/OpenAI Providers
 
-## Goal
+### Goal
 
 Implement runtime selection between local Ollama and remote OpenAI using the configuration introduced in Task 12.
 
@@ -935,9 +935,9 @@ The application must use the selected provider for both chat generation and docu
 
 Before making changes, inspect the existing implementation and the Task 11 and Task 12 conversation logs. Follow the existing project architecture and testing conventions. Do not assume the current implementation details without inspecting the files.
 
-## Required changes
+### Required changes
 
-### 1. Chat generation
+#### 1. Chat generation
 
 Update the existing LLM integration so that it selects the provider using `settings.ai_provider`.
 
@@ -947,7 +947,7 @@ Update the existing LLM integration so that it selects the provider using `setti
 * Fail with a clear, actionable error if the selected provider cannot be initialized or used.
 * Reuse existing abstractions and dependencies where practical. Do not introduce a new framework unnecessarily.
 
-### 2. Embeddings
+#### 2. Embeddings
 
 Update the existing embedding integration so that it uses the same selected provider.
 
@@ -957,7 +957,7 @@ Update the existing embedding integration so that it uses the same selected prov
 * Handle provider errors without silently returning invalid or empty embeddings.
 * Keep the embedding output compatible with the existing ChromaDB indexing and search interfaces.
 
-### 3. ChromaDB collection and embedding compatibility
+#### 3. ChromaDB collection and embedding compatibility
 
 Different embedding models can produce vectors with different dimensions and incompatible embedding spaces.
 
@@ -968,7 +968,7 @@ Different embedding models can produce vectors with different dimensions and inc
 * Document any required reindexing when changing embedding models.
 * Keep indexing and retrieval consistent: queries must use the same embedding configuration as the indexed documents.
 
-### 4. Configuration and compatibility
+#### 4. Configuration and compatibility
 
 Use the settings added in Task 12. Do not duplicate configuration or hardcode provider selection in application logic.
 
@@ -979,7 +979,7 @@ Use the settings added in Task 12. Do not duplicate configuration or hardcode pr
 * Do not add unrelated infrastructure, retries, health checks, or features.
 * Do not require an OpenAI account or API key for local Ollama mode.
 
-### 5. Tests
+#### 5. Tests
 
 Add or update focused unit tests for:
 
@@ -998,12 +998,11 @@ Use fake clients or mocked HTTP responses. Unit tests must not require a running
 Run the configuration tests and the full backend test suite from the `backend/` directory:
 
 `python -m pytest tests/test_config.py -q`
-
 `python -m pytest tests -q`
 
 Report the actual test results. Do not claim that a test passed unless it was executed successfully.
 
-### 6. Conversation log
+#### 6. Conversation log
 
 Create `ai-conversations/copilot-task-13.md`, using the next sequential task number.
 
@@ -1022,7 +1021,7 @@ Include:
 
 Do not overwrite previous task logs. Do not replace the original prompt with a summary. Preserve URLs and code exactly as sent rather than converting them into different Markdown content.
 
-## Constraints
+### Constraints
 
 * Do not change the frontend or the `/chat` API contract.
 * Do not rewrite the RAG pipeline or retrieval algorithm.
@@ -1034,7 +1033,7 @@ Do not overwrite previous task logs. Do not replace the original prompt with a s
 
 Before finishing, show the code diff, the complete Task 13 conversation log, and the actual test results. If any requirement cannot be safely implemented within this scope, explain the blocker rather than silently omitting it.
 
-## Task 14 — Improve Markdown-aware document chunking
+## Task 14 - Improve Markdown-aware document chunking
 
 ### Goal
 
@@ -1070,25 +1069,85 @@ Improve the deterministic character-based chunking in `backend/app/ingestion.py`
 
 Update `backend/tests/test_ingestion.py` to cover:
 
-* Existing loading and validation behavior.
-* Existing short-document behavior.
-* Deterministic chunk IDs and ordering.
-* Chunks staying within `chunk_size`.
-* Preference for paragraph boundaries.
-* Preference for sentence boundaries when a paragraph is too long.
-* Character-level fallback for a long sentence or token.
-* Correct overlap behavior.
-* Preservation of the original non-whitespace content without accidental omissions.
-* Empty and whitespace-only documents.
+- Existing loading and validation behavior.
+- Existing short-document behavior.
+- Deterministic chunk IDs and ordering.
+- Chunks staying within `chunk_size`.
+- Preference for paragraph boundaries.
+- Preference for sentence boundaries when a paragraph is too long.
+- Character-level fallback for a long sentence or token.
+- Correct overlap behavior.
+- Preservation of the original non-whitespace content without accidental omissions.
+- Empty and whitespace-only documents.
 
 Do not keep tests that require arbitrary fixed character slices when the new algorithm is expected to prefer semantic boundaries. Replace those assertions with behavior-based expectations.
 
 ### Acceptance criteria
 
-* Run `pytest backend/tests/test_ingestion.py -q` from the repository root, or run `pytest tests/test_ingestion.py -q` from `backend`.
-* Run the full backend test suite afterward.
-* Report the exact test commands and actual results.
-* Review the final diff and ensure only `backend/app/ingestion.py` and `backend/tests/test_ingestion.py` changed.
+- Run `pytest backend/tests/test_ingestion.py -q` from the repository root, or run `pytest tests/test_ingestion.py -q` from `backend`.
+- Run the full backend test suite afterward.
+- Report the exact test commands and actual results.
+- Review the final diff and ensure only `backend/app/ingestion.py` and `backend/tests/test_ingestion.py` changed.
 
 Implement the smallest clear solution. Do not make unrelated refactors.
 
+## Task 15 prompt (verbatim)
+
+````text
+# Task 15 - Keep Markdown Section Headings with Their Content
+
+### Goal
+
+Improve Markdown-aware chunking so section headings stay with the content they introduce whenever possible. Preserve the existing behavior for paragraph boundaries, sentence splitting, overlap, maximum chunk size, deterministic IDs, and content preservation.
+
+## Context
+
+The current implementation in `backend/app/ingestion.py` produces 8 chunks from the four knowledge-base documents. Some section headings end up at the end of the previous chunk while their content starts in the next one.
+
+Examples observed:
+
+- `## Best Practices` is at the end of `authentication-0`, while its bullet list is in `authentication-1`.
+- `## Operational Notes` is at the end of `integrations-0`, while its bullet list is in `integrations-1`.
+- `## Billing Rules` is at the end of `payments-0`, while its bullet list is split across the two chunks.
+- `## Resolution Steps` is at the end of `troubleshooting-0`, while the numbered steps are split across the two chunks.
+
+This can reduce retrieval quality when a query retrieves a chunk containing the heading but not the associated content, or vice versa.
+
+### Requirements
+
+1. Inspect the existing implementation and tests before editing.
+2. Update Markdown-aware chunking so a section heading is preferably grouped with the first content block it introduces, rather than being packed at the end of the preceding chunk.
+3. Preserve heading and content text exactly; do not drop, duplicate, or rewrite source content except for the existing intentional overlap behavior.
+4. Keep chunks at or below `chunk_size` characters.
+5. Preserve current sentence-aware splitting and word-aware fallback behavior for oversized content.
+6. Preserve the existing `chunk_documents()` function signature, metadata, deterministic chunk IDs, and validation behavior.
+7. Keep paragraph and list formatting as intact as reasonably possible. Do not split a short list unnecessarily if it can fit in one chunk.
+8. Add focused tests that reproduce the heading/content boundary issue. Cover at least:
+
+- A heading followed by a short paragraph.
+- A heading followed by a short bullet list.
+- A heading followed by a numbered list.
+- A heading that must still be split from content when the size limit makes grouping impossible.
+- Existing overlap and content-preservation behavior.
+9. Run `pytest backend/tests/test_ingestion.py -q`, then `pytest backend/tests -q`. Report the actual outputs and do not claim success if a command was not run.
+10. Keep the change scoped to `backend/app/ingestion.py` and `backend/tests/test_ingestion.py`, plus the required AI usage logs. Do not change the RAG prompt, retrieval algorithm, vector store, API, frontend, or Docker configuration.
+
+### AI usage logging - required
+
+Update or create `ai-conversations/copilot-task-15.md`. Include:
+
+- Task number and goal.
+- The exact prompt used for this task.
+- A concise summary of the implementation.
+- Files changed.
+- Tests actually run and their actual results.
+- Any limitations or follow-up work.
+
+Append this exact task prompt to `ai-conversations/raw_prompts.md` as well. Do not merely summarize the prompt there.
+
+Do not claim test results that have not been observed. If tests cannot be run, record them as pending and explain why.
+
+### Completion response
+
+Summarize the implementation, explain the heading-grouping behavior, list files changed, and provide actual test results. Flag any unrelated changes already present in the working tree instead of silently reverting them.
+````

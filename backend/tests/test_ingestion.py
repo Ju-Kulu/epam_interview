@@ -91,6 +91,73 @@ def test_chunks_prefer_paragraph_boundaries():
     ]
 
 
+def test_section_heading_stays_with_short_paragraph_at_chunk_boundary():
+    text = "Intro paragraph with context.\n\n## Configuration\n\nUse the secure callback URL."
+    chunks = chunk_documents(
+        [LoadedDocument(name="guide", title=None, text=text)],
+        chunk_size=50,
+        overlap=0,
+    )
+
+    assert len(chunks) == 2
+    assert "## Configuration" not in chunks[0].text
+    assert chunks[1].text.startswith("## Configuration")
+    assert "Use the secure callback URL." in chunks[1].text
+
+
+def test_section_heading_stays_with_short_bullet_list():
+    text = (
+        "Previous content belongs here.\n\n"
+        "## Best Practices\n"
+        "- Rotate keys.\n"
+        "- Store safely."
+    )
+    chunks = chunk_documents(
+        [LoadedDocument(name="guide", title=None, text=text)],
+        chunk_size=50,
+        overlap=0,
+    )
+
+    assert len(chunks) == 2
+    assert "## Best Practices" not in chunks[0].text
+    assert chunks[1].text.startswith("## Best Practices")
+    assert "- Rotate keys." in chunks[1].text
+    assert "- Store safely." in chunks[1].text
+
+
+def test_section_heading_stays_with_numbered_list():
+    text = (
+        "Previous section details.\n\n"
+        "## Steps\n"
+        "1. Check env.\n"
+        "2. Check URL."
+    )
+    chunks = chunk_documents(
+        [LoadedDocument(name="guide", title=None, text=text)],
+        chunk_size=38,
+        overlap=0,
+    )
+
+    assert len(chunks) == 2
+    assert "## Steps" not in chunks[0].text
+    assert chunks[1].text.startswith("## Steps")
+    assert "1. Check env." in chunks[1].text
+    assert "2. Check URL." in chunks[1].text
+
+
+def test_heading_and_content_split_when_group_exceeds_chunk_size():
+    text = "## Large Section\n\nThe initial content cannot fit beside its heading."
+    chunks = chunk_documents(
+        [LoadedDocument(name="guide", title=None, text=text)],
+        chunk_size=20,
+        overlap=0,
+    )
+
+    assert chunks[0].text == "## Large Section"
+    assert "The initial content" in " ".join(chunk.text for chunk in chunks[1:])
+    assert all(len(chunk.text) <= 20 for chunk in chunks)
+
+
 def test_oversized_paragraph_splits_at_sentence_boundaries():
     text = "First sentence has enough words. Second sentence has enough words."
     chunks = chunk_documents(
