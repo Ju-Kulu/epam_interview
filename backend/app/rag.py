@@ -17,15 +17,25 @@ class RAGResponse:
 
 
 def _build_prompt(question: str, chunks: list[RetrievedChunk]) -> str:
-	context = "\n\n".join(chunk.text for chunk in chunks)
-	return (
-		"Answer the question using only the supplied knowledge-base context. "
-		"Do not invent facts. If the context does not contain enough information, "
-		f"respond: {INFORMATION_UNAVAILABLE} "
-		"Do not generate, alter, or invent citation metadata.\n\n"
-		f"Knowledge-base context:\n{context}\n\n"
-		f"Question:\n{question}"
-	)
+    context = "\n\n".join(chunk.text for chunk in chunks)
+    return (
+        "You are an enterprise knowledge-base assistant helping customer support teams.\n"
+        "Answer the user's question using only facts explicitly supported by the "
+        "knowledge-base context below.\n\n"
+        "Rules:\n"
+        "1. Treat the knowledge-base context as the only source of factual information. Do not invent facts.\n"
+        "2. Give relevant troubleshooting steps that are explicitly stated in the context.\n"
+        "3. Do not invent causes, procedures, commands, recommendations, or explanations.\n"
+        "4. Do not assume that a related symptom proves a specific cause.\n"
+        "5. If the context supports a partial answer, provide that answer and clearly "
+        "state what specific information is missing.\n"
+        f"6. If the context provides no useful answer, respond exactly: "
+        f"{INFORMATION_UNAVAILABLE}\n"
+        "7. Do not generate or modify source names, document identifiers, or citation metadata.\n\n"
+        f"Knowledge-base context:\n{context}\n\n"
+        f"Question:\n{question}\n\n"
+        "Answer:"
+    )
 
 
 def answer_question(
