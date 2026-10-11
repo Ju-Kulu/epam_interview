@@ -1,16 +1,18 @@
 # Enterprise Knowledge Base RAG Chatbot
 
 A Docker Compose RAG prototype that answers questions from four mock enterprise Markdown guides and returns inspectable source references.
-
 ## Start
 
 Prerequisites: Docker Desktop on Windows, or Docker Engine and the Compose plugin on Linux; network access for container images and Ollama models; and several gigabytes of free disk space. No host Python, Node.js, Ollama installation, or manual model download is required for the default setup.
 
 From the repository root, run:
 
-```powershell
+**Windows (PowerShell) and Linux (terminal):**
+```bash
 docker compose up --build
 ```
+
+On Linux, if your user does not have permission to access the Docker daemon, run `sudo docker compose up --build` until you configure Docker permissions.
 
 Keep this terminal open. On first startup, Compose builds the frontend/backend images, downloads the Ollama image and configured models, starts ChromaDB, then starts the backend after dependencies are ready. Docker reported the Ollama image at about 3.8 GB in this audit; model weights add more, so the first pull can take several minutes or substantially longer depending on network speed. The models and Chroma database persist across restarts.
 
@@ -22,11 +24,84 @@ When backend startup/indexing has completed, open:
 
 To stop the stack, press `Ctrl+C`, or from another terminal in the repository run:
 
-```powershell
+```bash
 docker compose down
 ```
 
 This stops and removes containers but keeps named data volumes. Do not add `-v` unless you intend to delete the persisted Chroma database and Ollama models.
+
+## Installing prerequisites
+
+### Windows
+
+1. Install [Docker Desktop for Windows](https://docs.docker.com/desktop/setup/install/windows-install/).
+2. Start Docker Desktop and wait until its Docker engine is running.
+3. Install [Git for Windows](https://git-scm.com/install/windows).
+4. Clone the repository using the repository URL provided for this project.
+5. Open PowerShell in the cloned repository directory.
+6. Follow the [Start](#start) instructions above.
+
+Verify the installation in PowerShell:
+
+```powershell
+git --version
+docker --version
+docker compose version
+```
+
+If Docker commands fail, check that Docker Desktop is running and its Linux container engine is available.
+
+### Ubuntu Linux
+
+The following instructions install Git and Docker Engine with the Compose plugin from Docker's official Ubuntu repository.
+
+Install Git and the required utilities:
+
+```bash
+sudo apt update
+sudo apt install -y git ca-certificates curl
+```
+
+Add Docker's official GPG key:
+
+```bash
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+sudo chmod a+r /etc/apt/keyrings/docker.asc
+```
+
+Configure the Docker package repository:
+
+```bash
+sudo mkdir -p /etc/apt/sources.list.d
+sudo tee /etc/apt/sources.list.d/docker.sources > /dev/null <<EOF
+Types: deb
+URIs: https://download.docker.com/linux/ubuntu
+Suites: $(. /etc/os-release && echo "${UBUNTU_CODENAME:-$VERSION_CODENAME}")
+Components: stable
+Architectures: $(dpkg --print-architecture)
+Signed-By: /etc/apt/keyrings/docker.asc
+EOF
+```
+
+Update the package index and install Docker Engine and the Compose plugin:
+
+```bash
+sudo apt update
+sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+```
+
+Verify the installation:
+
+```bash
+git --version
+docker --version
+docker compose version
+sudo docker run hello-world
+```
+
+If `hello-world` succeeds but Docker commands without `sudo` report `permission denied` for `/var/run/docker.sock`, Docker is installed but the current user does not have permission to access the Docker daemon. You can temporarily run Docker commands with `sudo`. For persistent non-root access, follow the [official Docker post-installation instructions for Linux](https://docs.docker.com/engine/install/linux-postinstall/). Membership in the `docker` group grants root-level privileges.
+
 
 ## What runs
 
@@ -59,15 +134,25 @@ The backend configuration has local defaults `CHROMA_HOST=localhost` and `CHROMA
 
 ## Verify and troubleshoot
 
-From another PowerShell window at the repository root:
+**Windows powershell:**
 
 ```powershell
 docker compose ps
-Invoke-RestMethod http://localhost:8000/health
+Invoke-RestMethod -Uri "http://localhost:8000/health"
 $body = @{ question = 'What should OAuth redirect URLs use?' } | ConvertTo-Json
-$result = Invoke-RestMethod -Method Post -Uri http://localhost:8000/chat -ContentType 'application/json' -Body $body
+$result = Invoke-RestMethod -Method Post -Uri "http://localhost:8000/chat" -ContentType 'application/json' -Body $body
 $result.answer
 $result.sources | Format-Table chunk_id, document, title, distance
+```
+
+**Linux terminal:**
+
+```bash
+docker compose ps
+curl http://localhost:8000/health
+curl -X POST http://localhost:8000/chat \
+  -H "Content-Type: application/json" \
+  -d '{"question":"What should OAuth redirect URLs use?"}'
 ```
 
 The health response is `{"status":"healthy"}`; it is not a downstream readiness probe. A successful chat response with sources verifies more of the path. Backend API docs are at `/docs`.
@@ -80,10 +165,11 @@ Common checks:
 - **Port already in use:** free host port 5173, 8000, or 8001 before starting, or intentionally edit the corresponding Compose mapping.
 - **HTTP 422 from `/chat`:** send JSON with a non-empty string `question`.
 - **Backend exits during startup:** inspect `docker compose logs backend`; indexing needs `/data`, Chroma, and the configured embedding provider available.
+- **Docker permission denied on Linux:** check Docker access permissions. Use `sudo docker compose ...` temporarily or configure non-root access using the official Docker post-installation instructions.
 
 Backend tests (run in another terminal while the stack is up):
 
-```powershell
+```bash
 docker compose exec backend python -m pytest tests -q
 ```
 
