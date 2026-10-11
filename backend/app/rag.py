@@ -12,8 +12,8 @@ INFORMATION_UNAVAILABLE = "The information is not available in the knowledge bas
 
 @dataclass(frozen=True)
 class RAGResponse:
-	answer: str
-	sources: list[RetrievedChunk]
+    answer: str
+    sources: list[RetrievedChunk]
 
 
 def _build_prompt(question: str, chunks: list[RetrievedChunk]) -> str:
@@ -39,22 +39,22 @@ def _build_prompt(question: str, chunks: list[RetrievedChunk]) -> str:
 
 
 def answer_question(
-	question: str,
-	vector_store: VectorStore | None = None,
-	*,
-	top_k: int = 3,
-	answer_generator: Callable[[str], str] | None = None,
+    question: str,
+    vector_store: VectorStore | None = None,
+    *,
+    top_k: int = 3,
+    answer_generator: Callable[[str], str] | None = None,
 ) -> RAGResponse:
-	"""Retrieve relevant context and generate an answer grounded in it."""
-	if not question.strip():
-		raise ValueError("question must not be empty or whitespace-only.")
+    """Retrieve relevant context and generate an answer grounded in it."""
+    if not question.strip():
+        raise ValueError("question must not be empty or whitespace-only.")
 
-	store = vector_store if vector_store is not None else VectorStore()
-	chunks = store.search(question, top_k=top_k)
-	if not chunks:
-		return RAGResponse(answer=INFORMATION_UNAVAILABLE, sources=[])
+    store = vector_store if vector_store is not None else VectorStore()
+    chunks = store.search(question, top_k=top_k)
+    if not chunks:
+        return RAGResponse(answer=INFORMATION_UNAVAILABLE, sources=[])
 
-	prompt = _build_prompt(question, chunks)
-	generate = answer_generator if answer_generator is not None else generate_answer
-	answer = generate(prompt)
-	return RAGResponse(answer=answer, sources=chunks)
+    prompt = _build_prompt(question, chunks)
+    generate = answer_generator if answer_generator is not None else generate_answer
+    answer = generate(prompt)
+    return RAGResponse(answer=answer, sources=chunks)
