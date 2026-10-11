@@ -1239,3 +1239,137 @@ Preserve existing logs and unrelated user changes. Do not reformat or rewrite ea
 Implemented an endpoint to retrieve the full original Markdown document by document ID. Updated the frontend source references to open the selected document in an inline panel, with loading and error states. Added a Vite proxy rule for `/documents` to route requests to the backend.
 
 Verified document retrieval through the frontend proxy and tested opening multiple source documents in the UI. Existing RAG retrieval and answer generation logic remains unchanged.
+
+## Task 18 - Finish README and Fix Required Project Issues
+
+### Goal
+
+Finish the existing README work. Make the README short, clear, and accurate, and fix any project issues that prevent the documented setup from working correctly.
+
+Focus only on README completion and directly related fixes. Do not perform a general code cleanup, unused-file audit, or unrelated refactoring.
+
+### 1. Inspect the current state
+
+Inspect `README.md`, `docker-compose.yml`, the Dockerfiles, the existing requirements file, Ollama configuration, `.env.example`, relevant application code, and existing tests.
+
+Check the actual repository structure before making assumptions. Preserve working functionality and unrelated user changes.
+
+### 2. Make the project setup straightforward
+
+The intended startup experience is:
+
+1. Install Docker Desktop on Windows or Docker Engine and the Compose plugin on Linux.
+2. Run `docker compose up --build`.
+3. Open `http://localhost:5173`.
+
+The frontend, backend, and ChromaDB already use Docker Compose. The goal is to avoid unnecessary setup steps and make the documented startup reliable.
+
+Ollama currently runs on the Windows host, and the backend uses `http://host.docker.internal:11434`. Inspect the current implementation before changing it.
+
+Prefer a fully Dockerized setup, including Ollama and automatic availability of the required models, if this can be implemented reliably without unnecessary complexity. If changes are needed, ensure that:
+- The backend connects to services using the correct addresses.
+- The required chat and embedding models are available automatically.
+- Model data and ChromaDB data persist across restarts.
+- Startup waits for required services to become ready.
+- The first startup downloads models only when necessary.
+- The setup works on Windows and Linux where practical.
+
+Do not introduce a complicated initialization architecture for its own sake. If fully Dockerizing Ollama would require disproportionate changes or cannot be verified, explain the limitation and choose the simplest reliable solution. Do not claim the application is fully self-contained if it still requires Ollama or models to be installed manually on the host.
+
+### 3. Preserve Python dependencies
+
+The existing requirements file contains:
+
+```text
+fastapi==0.115.0
+uvicorn==0.30.6
+pydantic==2.9.2
+pydantic-settings==2.6.1
+pytest==8.3.3
+python-dotenv==1.0.1
+openai==1.54.0
+chromadb==1.5.9
+httpx==0.27.2
+```
+
+Keep these pinned versions unless a concrete compatibility issue requires a change.
+
+Ensure the backend Docker image installs dependencies from the existing requirements file during the image build. The user should not need to install Python dependencies manually on the host.
+
+Do not add dependencies without a clear reason.
+
+### 4. Rewrite README.md
+
+Keep the README concise and practical. Remove lengthy explanations, redundant configuration details, and instructions for hybrid or unverified setups.
+
+Include:
+- One-sentence project description.
+- Prerequisites.
+- The startup command: `docker compose up --build`.
+- The frontend URL and useful backend health/API URL.
+- The stop command: `docker compose down`.
+- A brief note that the first startup may take several minutes to download images and AI models.
+- A short troubleshooting section for common problems.
+
+The instructions must match the actual implementation. Do not describe a Docker-only setup if manual host-side Ollama installation or model downloads are still required.
+
+Do not create additional documentation unless it is genuinely necessary.
+
+### 5. Make only necessary project fixes
+
+If inspection reveals issues that prevent the README instructions from working, fix them.
+
+Avoid unrelated refactoring, feature changes, broad cleanup, or deletion of files. Preserve the current application behavior.
+
+### 6. Run validation
+
+Run the following checks where possible:
+- Backend tests.
+- Frontend production build.
+- Docker Compose configuration validation.
+- Docker image build.
+- Startup and health checks.
+- A chat request verifying that an answer and sources are returned.
+- Frontend availability at `http://localhost:5173`.
+
+Test a clean startup if feasible. Clearly distinguish a fresh-start test from checks against an already-running stack.
+
+Fix regressions caused by your changes. Do not claim a test passed unless it was actually executed successfully. Report checks that could not be run as unverified.
+
+### 7. Update the Copilot task log
+
+Create or update `ai-conversations/copilot-task-18.md`.
+
+Use exactly these headings:
+
+```markdown
+# Task 18 - Finish README and Fix Required Project Issues
+
+## Task name and goal
+
+## Prompt summary
+
+## Implementation / result
+
+## Files changed
+
+## Tests and result
+
+## Important decisions / assumptions
+
+## Corrections / limitations
+```
+
+Record the actual changes, files modified, commands executed, test results, important decisions, and remaining limitations. Keep the log concise and factual.
+
+### 8. Final review
+
+Before finishing:
+- Verify that the README is concise and matches the actual setup.
+- Verify that the backend image installs dependencies from the existing requirements file.
+- Verify the Docker Compose configuration.
+- Confirm that the task log exists and contains all required headings.
+- Review `git status` and the diff for accidental or unrelated changes.
+- Do not commit anything.
+
+In your final response, summarize what changed, report actual validation results, identify remaining limitations, and provide the task log path. Implement the changes; do not stop after analysis or planning.
