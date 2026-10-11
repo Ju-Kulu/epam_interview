@@ -1,4 +1,4 @@
-# Enterprise Knowledge Base RAG Chatbot — Implementation Plan
+# Enterprise Knowledge Base RAG Chatbot - Implementation Plan
 
 ## Goal
 

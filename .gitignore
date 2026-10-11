@@ -28,3 +28,6 @@ Thumbs.db
 
 # Local data
 /chroma/
+
+# Local ChromaDB data
+backend/chroma_data/
