@@ -38,4 +38,8 @@ This branch contains the project structure and configuration only. The applicati
 
 - No real API keys are committed to the repository.
 - The app is designed as a prototype and will evolve in incremental steps.
-- AI assistant usage and reviews are documented in the project log under docs/ai-assistant-log.md.
+- AI assistant usage and reviews are documented in the project log under ai-conversations/ai-assistant-log.md.
+
+## AI Assistant Usage Logs
+
+`ai-conversations/` contains concise per-task AI assistant usage logs for Tasks 1–4, including prompt summaries where exact historical text is unavailable, implementation results, changed files, test outcomes, and key decisions. This directory fulfills the assignment's AI assistant log requirement.
