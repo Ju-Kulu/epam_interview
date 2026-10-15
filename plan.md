@@ -1,4 +1,4 @@
-# Enterprise Knowledge Base RAG Chatbot — Implementation Plan
+# Enterprise Knowledge Base RAG Chatbot - Implementation Plan
 
 ## Goal
 
@@ -347,19 +347,39 @@ Do not implement these unless required for the prototype.
 
 # AI assistant requirement
 
-The assignment requires an export of AI assistant conversation logs.
+The assignment requires AI assistant conversation logs to be included in the repository.
 
-Create a suitable location for the logs, for example:
+Create and maintain a separate log for each implementation task:
 
-docs/ai-assistant-log.md
+ai-conversations/
+|__ copilot-task-1.md
+|__ copilot-task-2.md
+|__ copilot-task-3.md
+|__ ...
+
+Each task log should contain:
+
+- task name / goal
+- prompt or instructions given to the AI assistant
+- concise summary of the implementation/result
+- files changed
+- tests run and result
+- important decisions, assumptions, or corrections
+
+Do not copy large amounts of generated source code into the logs. The repository code is the source of truth.
+
+If the exact historical prompt is unavailable, clearly label the entry as a summary rather than reconstructing it as an exact transcript.
 
 The README must contain a short section describing:
 
-* which AI assistants were used
-* what they were used for
-* that the submitted code was reviewed by the candidate
+- which AI assistants were used
+- what they were used for
+- that the submitted code was reviewed by the candidate
 
-Do not claim that AI-generated code was blindly accepted.
+AI-generated code must be reviewed and understood by the candidate before being accepted.
+
+For every implementation task, create or update the corresponding:
+`ai-conversations/copilot-task-N.md`.
 
 ---
 
@@ -400,6 +420,7 @@ The project is considered complete when:
 * No API keys are committed.
 * AI assistant conversation logs are included.
 * The candidate can explain every important architectural and implementation decision.
+* For every implementation task, create/update ai-conversations/copilot-task-N.md.
 
 # Important constraint
 
